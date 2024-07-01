@@ -2,7 +2,8 @@ const { Op } = require('sequelize');
 const { Artist, Band, Album } = require('./models');
 
 
-async function createArtist(name, instrument, country) {
+async function createArtist(artistData) {
+    const { name, instrument, country } = artistData;
     const [artist, created] = await Artist.findOrCreate({
         where: { name, instrument, country },
         defaults: { name, instrument, country }
@@ -20,14 +21,15 @@ async function createArtist(name, instrument, country) {
 }
 
 
-async function createBand(name, formation_year, genre, member_ids) {
+async function createBand(bandData) {
+    const { name, formation_year, genre, memberIds } = bandData;
     const [band, created] = await Band.findOrCreate({
         where: { name },
         defaults: { name, formation_year, genre }
     });
 
-    if (member_ids && member_ids.length > 0) {
-        const members = await Artist.findAll({ where: { id: member_ids } });
+    if (memberIds && memberIds.length > 0) {
+        const members = await Artist.findAll({ where: { id: memberIds } });
         await band.setMembers(members);
     }
 
@@ -35,7 +37,8 @@ async function createBand(name, formation_year, genre, member_ids) {
 }
 
 
-async function createAlbum(title, releaseDate, genre, bandId) {
+async function createAlbum(albumData) {
+    const { title, releaseDate, genre, bandId } = albumData;
     const band = await Band.findByPk(bandId);
     if (!band) return null;
 
@@ -88,7 +91,7 @@ async function searchArtists(query = null, instrument = null, country = null) {
 
 async function searchBands(query = null, genre = null, formation_year = null) {
     const whereClause = {};
-    if (query) {
+    if (Object.keys(query).length !== 0) {
         whereClause[Op.or] = [
             { name: { [Op.iLike]: `%${query}%` } },
             { '$members.name$': { [Op.iLike]: `%${query}%` } }
@@ -97,7 +100,7 @@ async function searchBands(query = null, genre = null, formation_year = null) {
     if (genre) whereClause.genre = { [Op.iLike]: `%${genre}%` };
     if (formation_year) whereClause.formation_year = formation_year;
 
-    return Band.findAll({
+    results = await Band.findAll({
         where: whereClause,
         include: [{
             model: Artist,
@@ -105,6 +108,8 @@ async function searchBands(query = null, genre = null, formation_year = null) {
         }],
         distinct: true
     });
+    console.log("QUERY", results, whereClause, query, genre, formation_year)
+    return results;
 }
 
 

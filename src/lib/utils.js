@@ -27,9 +27,9 @@ function getTools() {
                         name: {type: "string", description: "Band's name"},
                         formation_year: {type: "integer", description: "Year the band was formed"},
                         genre: {type: "string", description: "Band's primary genre"},
-                        member_ids: {type: "array", items: {type: "integer"}, description: "List of artist IDs who are members of the band"}
+                        memberIds: {type: "array", items: {type: "integer"}, description: "List of artist IDs who are members of the band"}
                     },
-                    required: ["name", "formation_year", "genre", "member_ids"]
+                    required: ["name", "formation_year", "genre", "memberIds"]
                 },
             },
         },

@@ -22,6 +22,7 @@ router.post('/simple-test', async (req, res) => {
 
 
 router.post('/', async (req, res) => {
+    console.log("req.body", req.body)
     try {
         const result = await groqHandler.determineFunctionAndCall(req.body.userInput);
         res.json(result);

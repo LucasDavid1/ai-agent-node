@@ -38,15 +38,19 @@ class GroqHandlerSimple {
 }
 
 
-function callFunction(funcName, ...args) {
+async function callFunction(funcName, ...args) {
+    // [ { query: '' } ]
+    console.log("callFunction", args)
     const convertedArgs = args.map(arg => 
-        typeof arg === 'string' && !isNaN(arg) ? parseFloat(arg) : arg
+        { console.log("INSIDE ARG", arg)
+            return typeof arg === 'string' && !isNaN(arg) ? parseFloat(arg) : arg
+        }
     );
     
     if (funcName in FUNCTION_DICT) {
-        return FUNCTION_DICT[funcName](...convertedArgs);
+        return await FUNCTION_DICT[funcName](...convertedArgs);
     } else {
-        return "Function not found";
+        throw new Error("Function not found");
     }
 }
 
@@ -94,27 +98,30 @@ class GroqHandler {
         }
     }
 
-    executeOperations(processedOutput) {
+    async executeOperations(processedOutput) {
         const results = [];
         const context = {
             createdArtists: [],
             createdBand: null
         };
-
+    
         for (const operation of processedOutput) {
             const funcName = operation.function;
             const args = operation.arguments;
             
             let result;
             if (funcName === 'createArtist') {
-                result = callFunction(funcName, args);
+                result = await callFunction(funcName, args);
                 context.createdArtists.push(result);
             } else if (funcName === 'createBand') {
-                const member_ids = args.member_ids || [];
-                args.member_ids = member_ids
-                    .filter((_, i) => i < context.createdArtists.length)
-                    .map((_, i) => context.createdArtists[i].id);
-                result = callFunction(funcName, args);
+                if (args.memberIds) {
+                    args.member_ids = args.memberIds;
+                    delete args.memberIds;
+                }
+                if (!args.member_ids) {
+                    args.member_ids = context.createdArtists.map(artist => artist.id);
+                }
+                result = await callFunction(funcName, args);
                 context.createdBand = result;
             } else if (funcName === 'createAlbum') {
                 if ('releaseDate' in args) {
@@ -123,14 +130,14 @@ class GroqHandler {
                 if ('bandId' in args && typeof args.bandId === 'number') {
                     args.bandId = context.createdBand ? context.createdBand.id : args.bandId;
                 }
-                result = callFunction(funcName, args);
+                result = await callFunction(funcName, args);
             } else {
-                result = callFunction(funcName, args);
+                result = await callFunction(funcName, args);
             }
             
             results.push(result);
         }
-
+    
         return results;
     }
 
@@ -138,6 +145,7 @@ class GroqHandler {
         const modelOutput = await this.getCompletion(userInput);
         
         const processedOutput = this.processOutput(modelOutput);
+        console.log("#########", modelOutput)
         if (processedOutput[0] === "parseError") {
             return "Error: Could not parse the model output";
         }
